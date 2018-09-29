@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import csv
+import sqlite3
 from time import sleep, time
 from constants import Teams
 
@@ -21,9 +22,6 @@ class Scrape_Stats(object):
 			day should be fomatted like the following if the day is the 2nd: 02
 		"""
 
-
-
-		"""https://stats.nba.com/players/boxscores-traditional/?Season=2017-18&SeasonType=Regular%20Season&DateFrom=01%2F19%2F2018&DateTo=01%2F19%2F2018"""
 		self.season = season
 		self.players = []
 		self.sources = []
@@ -39,7 +37,7 @@ class Scrape_Stats(object):
 	def scrape_season(self):
 
 		index = 1
-
+#8
 		while index < 8:
 
 			url = f"https://stats.nba.com/players/boxscores-traditional/?Season={self.season}&SeasonType=Regular%20Season&Month={index}"
@@ -135,6 +133,18 @@ class Scrape_Stats(object):
 					self.players.append(player)
 				index = index + 1
 
+	def write_to_DataBase(self):
+		conn = sqlite3.connect(self.season + 'players.db')
+		cursor = conn.cursor()
+		cursor.execute(''' CREATE TABLE IF NOT EXISTS players(name text, team text, match_up text, game_date text, result text, minutes text, points text, fgm text, fga text, fg_percent text, threepm text, threepa text,
+								threep_percent text, ftm text, fta text, ft_percent text, oreb text, dreb text, reb text, ast text, stl text, blk text, tov text)''')
+
+		cursor.executemany('INSERT INTO players VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', self.players)
+		conn.commit()
+
+		conn.close()
+
+
 
 	def write_to_file(self):
 		with open('players.csv', 'a',  newline='') as csv_file:
@@ -143,26 +153,6 @@ class Scrape_Stats(object):
 				fieldnames = ['player_name','team_name', 'match_up', 'game_date', 'W_and_L', 'minutes', 'points', 'fgm', 'fga', 'fg_percent', 'threepm', 'threepa',
 								'threep_percent', 'ftm', 'fta', 'ft_percent', 'oreb', 'dreb', 'reb', 'ast', 'stl', 'blk', 'tov', 'pf', 'plus_minus']
 				writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-
-				print(player[0])
-				print(player[1])
-				print(player[2])
-				print(player[3])
-				print(player[4])
-				print(player[5])
-				print(player[6])
-				print(player[7])
-				print(player[8])
-				print(player[9])
-				print(player[10])
-				print(player[11])
-				print(player[12])
-				print(player[13])
-				print(player[14])
-				print(player[15])
-				print(player[17])
-				print()
-				print()
 
 				writer.writerow({ 'player_name': player[0], 'team_name': player[1], 'match_up': player[2], 'game_date': player[3], 'W_and_L': player[4], 'minutes': player[5], 'points': player[6], 'fgm': player[7], 'fga': player[8],
 					'fg_percent': player[9], 'threepm': player[10], 'threepa': player[11], 'threep_percent': player[12], 'ftm': player[13], 'fta': player[14], 'ft_percent': player[15], 'oreb': player[16], 'dreb': player[17], 'reb': player[18],
@@ -180,12 +170,10 @@ class Scrape_Stats(object):
 	def run(self):
 		self.scrape_season()
 		self.parse_html()
-		self.write_to_file()
+		self.write_to_DataBase()
 
 
 
 scrape = Scrape_Stats("2015-16")
 scrape.run()
-
-
 
