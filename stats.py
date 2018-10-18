@@ -16,7 +16,7 @@ from selenium.common.exceptions import TimeoutException
 
 class Scrape_Stats(object):
 	""" Scrapes www.stats.nba.com """
-	def __init__(self, season):
+	def __init__(self, season="2018-19"):
 		""" season should be formated like the following: 2016-17.
 			month should be fomatted like the following if the month is january: 01
 			day should be fomatted like the following if the day is the 2nd: 02
@@ -85,6 +85,72 @@ class Scrape_Stats(object):
 
 		self.driver.quit()
 
+	def scrape_previous_day(self):
+		#todaysDate = datetime.datetime.today().strftime('%Y-%m-%d')
+		yesterday = datetime.today() - timedelta(days=1)
+		yesterday = yesterday.strftime('%m/%d/%Y')
+
+		print(yesterday)
+
+
+		url = f"https://stats.nba.com/players/boxscores-traditional/?Season={self.season}&SeasonType=Regular%20Season&DateFrom={yesterday}"
+
+		self.driver.get(url)
+		print("starting")
+		wait = WebDriverWait(self.driver, self.explicit_wait)
+		skip = False
+		moreThan50Players = False
+
+		try:
+			self.driver.find_element_by_link_text('No statistics are currently available for the selected filters.')
+			skip = True
+		except:
+			print("Finding stats")
+
+		try:
+			wait.until(EC.presence_of_all_elements_located((By.XPATH, "//div[@class='stats-table-pagination__info']/select")))
+			moreThan50Players = True
+		except:
+			print("less than 50 players to scrape")
+
+		if skip == False and moreThan50Players == True:
+			wait.until(EC.presence_of_all_elements_located((By.XPATH, "//div[@class='stats-table-pagination__info']/select")))
+			selectButton = Select(self.driver.find_element_by_xpath("//div[@class='stats-table-pagination__info']/select"))
+			selectButton.select_by_visible_text('All')
+
+			# Might need to change this based on how big the search is and how fast your computer can load the webpage
+			sleep(15)
+			#change this
+			wait.until(EC.presence_of_all_elements_located((By.XPATH, "//table/tbody/tr[51]")))
+
+			print("Found players")
+
+			self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+			res = self.driver.execute_script("return document.documentElement.outerHTML")
+
+			self.sources.append(res)
+
+			print("done")
+		elif skip == False and moreThan50Players == False:
+			sleep(5)
+			wait.until(EC.presence_of_all_elements_located((By.XPATH, "//table/tbody/tr[1]")))
+
+			print("Found players")
+
+			self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+			res = self.driver.execute_script("return document.documentElement.outerHTML")
+
+			self.sources.append(res)
+
+			print("done")
+
+		else:
+
+			print("No statistics found")
+
+		self.driver.quit()
 
 	def parse_html(self):
 		for source in self.sources:
@@ -164,8 +230,6 @@ class Scrape_Stats(object):
 	def scrape_day(self):
 		pass
 
-	def scrape_current_day(self):
-		pass
 
 	def run(self):
 		self.scrape_season()
